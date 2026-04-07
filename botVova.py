@@ -1,4 +1,3 @@
-
 import logging
 import re
 import asyncio
@@ -25,39 +24,26 @@ RECIPIENT_IDS = [
 ]
 
 # Хранилище для напоминаний
-# {user_id: {"status": "waiting", "reminder_count": 0, "last_reminder": datetime, "start_time": datetime}}
-reminder_data = {}
+reminder_data = {}  # {user_id: {"status": "waiting", "reminder_count": 0, "last_reminder": datetime, "start_time": datetime}}
 
 # Состояния для квиза
-(
-    PORODA,
-    SIZE,
-    KOLESA,
-    ZAMKI,
-    TOP_TYPE,
-    BOTTOM_TYPE,
-    COLOR,
-    MESSENGER,
-    CONTACT,
-) = range(9)
-
-# Состояние для консультации
+(PORODA, SIZE, KOLESA, ZAMKI, TOP_TYPE, BOTTOM_TYPE, COLOR, MESSENGER, CONTACT) = range(9)
 CONSULT_CONTACT = 99
 
 # Клавиатуры
-YES_NO_KEYBOARD = ReplyKeyboardMarkup([["Да", "Нет"]], resize_keyboard=True, one_time_keyboard=True)
+YES_NO_KEYBOARD = ReplyKeyboardMarkup([["Да", "Нет"]], resize_keyboard=True)
 TOP_KEYBOARD = ReplyKeyboardMarkup([
     ["ЛДСП", "Влагостойкая фанера"],
     ["Решётка", "Выдвижные ящики"],
     ["Без верха"]
-], resize_keyboard=True, one_time_keyboard=True)
+], resize_keyboard=True)
 BOTTOM_KEYBOARD = ReplyKeyboardMarkup([
     ["Влагостойкая фанера", "ЛДСП"],
     ["Металлический поддон", "Без дна"]
-], resize_keyboard=True, one_time_keyboard=True)
-COLOR_KEYBOARD = ReplyKeyboardMarkup([["Чёрный", "Белый", "Графит"]], resize_keyboard=True, one_time_keyboard=True)
-MESSENGER_KEYBOARD = ReplyKeyboardMarkup([["WhatsApp", "Telegram", "Viber"]], resize_keyboard=True, one_time_keyboard=True)
-SIZE_KEYBOARD = ReplyKeyboardMarkup([["❓ Не знаю размер, нужна консультация"]], resize_keyboard=True, one_time_keyboard=True)
+], resize_keyboard=True)
+COLOR_KEYBOARD = ReplyKeyboardMarkup([["Чёрный", "Белый", "Графит"]], resize_keyboard=True)
+MESSENGER_KEYBOARD = ReplyKeyboardMarkup([["WhatsApp", "Telegram", "Viber"]], resize_keyboard=True)
+SIZE_KEYBOARD = ReplyKeyboardMarkup([["❓ Не знаю размер, нужна консультация"]], resize_keyboard=True)
 BACK_TO_MENU = ReplyKeyboardMarkup([["🏠 В главное меню"]], resize_keyboard=True)
 
 MAIN_MENU_KEYBOARD = ReplyKeyboardMarkup([
@@ -84,7 +70,7 @@ async def send_reminder(application: Application, user_id: int, reminder_type: s
                     "🐕 *Напоминание!*\n\n"
                     "Вы запускали бота, но ещё не подобрали клетку для своего питомца.\n\n"
                     "Хотите прямо сейчас подобрать идеальную клетку?\n\n"
-                    "Нажмите «🔧 Подобрать клетку» в главном меню или напишите /start.\n\n"
+                    "Нажмите «🔧 Подобрать клетку» в главном меню.\n\n"
                     "Мы ждём вас! 🏡"
                 )
             else:  # long (7 days)
@@ -92,7 +78,7 @@ async def send_reminder(application: Application, user_id: int, reminder_type: s
                     "🐕 *Давно не виделись!*\n\n"
                     "Вы интересовались клеткой для своей собаки, но так и не подобрали её.\n\n"
                     "Может быть, сейчас самое время?\n\n"
-                    "Нажмите «🔧 Подобрать клетку» и мы поможем выбрать идеальный домик для вашего питомца.\n\n"
+                    "Нажмите «🔧 Подобрать клетку» — мы поможем выбрать идеальный домик для вашего питомца.\n\n"
                     "Ждём вас с нетерпением! ❤️"
                 )
             
@@ -103,9 +89,9 @@ async def send_reminder(application: Application, user_id: int, reminder_type: s
                     parse_mode="Markdown",
                     reply_markup=MAIN_MENU_KEYBOARD
                 )
-                logger.info(f"Отправлено напоминание ({reminder_type}) пользователю {user_id} (попытка {user_info['reminder_count']})")
+                logger.info(f"Напоминание ({reminder_type}) отправлено пользователю {user_id} (попытка {user_info['reminder_count']})")
             except Exception as e:
-                logger.error(f"Ошибка отправки напоминания пользователю {user_id}: {e}")
+                logger.error(f"Ошибка отправки напоминания {user_id}: {e}")
 
 
 async def check_reminders(application: Application):
@@ -126,7 +112,7 @@ async def check_reminders(application: Application):
             if reminder_count == 0 and now - start_time >= timedelta(minutes=30):
                 await send_reminder(application, user_id, "short")
             
-            # 2-е напоминание через 60 минут (ещё через 30 после первого)
+            # 2-е напоминание через 60 минут
             elif reminder_count == 1 and now - last_reminder >= timedelta(minutes=30):
                 await send_reminder(application, user_id, "short")
             
@@ -136,13 +122,13 @@ async def check_reminders(application: Application):
 
 
 def validate_belarus_phone(phone: str) -> bool:
-    """Проверяет, является ли строка корректным белорусским номером в формате +375XXXXXXXXX."""
+    """Проверяет белорусский номер телефона."""
     cleaned = re.sub(r'[\s\-\(\)]', '', phone)
-    pattern = r'^\+375\d{9}$'
-    return bool(re.match(pattern, cleaned))
+    return bool(re.match(r'^\+375\d{9}$', cleaned))
+
 
 def normalize_phone(phone: str) -> str:
-    """Приводит номер к единому формату +375XXXXXXXXX."""
+    """Приводит номер к формату +375XXXXXXXXX."""
     cleaned = re.sub(r'[\s\-\(\)]', '', phone)
     if cleaned.startswith('+375') and len(cleaned) == 13:
         return cleaned
@@ -150,13 +136,14 @@ def normalize_phone(phone: str) -> str:
         return '+375' + cleaned[1:]
     return cleaned
 
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.effective_user.id
     
     # Записываем пользователя в систему напоминаний
     if user_id not in reminder_data:
         reminder_data[user_id] = {
-            "status": "waiting",  # waiting - ждёт, in_progress - начал опрос, completed - прошёл
+            "status": "waiting",
             "reminder_count": 0,
             "start_time": datetime.now(),
             "last_reminder": None
@@ -169,6 +156,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     )
     return ConversationHandler.END
 
+
 async def faq(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     faq_text = (
         "❓ *Часто задаваемые вопросы:*\n\n"
@@ -177,40 +165,37 @@ async def faq(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "3️⃣ *Доставка?* – по РБ к дому 1–2 дня.\n"
         "4️⃣ *Цена?* – зависит от размера и дизайна, уточнит менеджер.\n"
         "5️⃣ *Оплата?* – предоплата 30%, остальное при получении.\n"
-        "6️⃣ *Материалы?* – ЛДСП, металл, фанера, мебельный щит. Каркас – сталь + порошковая краска.\n"
+        "6️⃣ *Материалы?* – ЛДСП, металл, фанера, мебельный щит.\n"
         "7️⃣ *Расстояние между прутьями?* – 7 см (стандарт), для маленьких – 3–5 см.\n"
-        "8️⃣ *Цвета каркаса?* – чёрный, белый, графит (фото покажутся при выборе цвета в квизе)."
+        "8️⃣ *Цвета каркаса?* – чёрный, белый, графит (фото в квизе)."
     )
     await update.message.reply_text(faq_text, parse_mode="Markdown")
+
 
 async def etapy_raboty(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     etapy_text = (
         "📋 *Этапы работы:*\n\n"
         "1️⃣ *Консультация и замеры*\n"
-        "   Менеджер уточняет породу, размеры собаки. Важно: собаке должно быть удобно вставать, разворачиваться и лежать вытянув лапы.\n"
-        "   На этом этапе клиент решает: глухие стенки или решётка, один или два поддона, наличие колесиков, замков, откидной крышки.\n\n"
         "2️⃣ *Выбор материалов и дизайна*\n"
-        "   Клетка: стальные прутья, стальной каркас из профильной трубы. Покрытие: порошковая краска.\n"
-        "   Поддон: стальной или пол на выбор из фанеры либо ЛДСП.\n\n"
         "3️⃣ *Согласование размеров*\n"
-        "   (Д×Ш×В), при необходимости чертёж. Шаг прутьев 7 см (для мелких пород 3-5 см).\n"
-        "   Клиент утверждает расположение дверцы и тип замка.\n\n"
-        "4️⃣ *Изготовление* – 5-7 рабочих дней.\n\n"
-        "5️⃣ *Доставка* – в разобранном виде или самовывоз."
+        "4️⃣ *Изготовление* – 5-7 дней\n"
+        "5️⃣ *Доставка* – в разобранном виде"
     )
     await update.message.reply_text(etapy_text, parse_mode="Markdown")
+
 
 async def consult_manager(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text(
         "📞 *Консультация менеджера*\n\n"
-        "Менеджер свяжется с вами в ближайшее время (обычно в течение часа).\n\n"
-        "Оставьте, пожалуйста, ваш контакт:\n"
-        "• Белорусский номер телефона в формате +375XXXXXXXXX (например, +375291234567)\n"
-        "• Или Telegram username (начинается с @)",
+        "Менеджер свяжется с вами в ближайшее время.\n\n"
+        "Оставьте ваш контакт:\n"
+        "• +375XXXXXXXXX\n"
+        "• или @username",
         parse_mode="Markdown",
         reply_markup=BACK_TO_MENU
     )
     return CONSULT_CONTACT
+
 
 async def consult_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
@@ -218,64 +203,62 @@ async def consult_contact(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return ConversationHandler.END
 
     contact = update.message.text.strip()
-    if contact.startswith('@'):
-        pass
-    elif validate_belarus_phone(contact):
-        contact = normalize_phone(contact)
+    if contact.startswith('@') or validate_belarus_phone(contact):
+        if not contact.startswith('@'):
+            contact = normalize_phone(contact)
+        
+        consult_text = f"📞 *ЗАПРОС КОНСУЛЬТАЦИИ*\n\nКонтакт: {contact}"
+        for chat_id in RECIPIENT_IDS:
+            await context.bot.send_message(chat_id=chat_id, text=consult_text, parse_mode="Markdown")
+        
+        await update.message.reply_text(
+            "✅ Спасибо! Менеджер свяжется с вами.",
+            reply_markup=MAIN_MENU_KEYBOARD
+        )
     else:
         await update.message.reply_text(
-            "❌ Неверный формат.\n\n"
-            "Пожалуйста, введите корректный белорусский номер телефона в формате +375XXXXXXXXX\n"
-            "Или Telegram username (начинается с @).\n\n"
-            "Примеры: +375291234567, @ivan_ivanov",
+            "❌ Неверный формат. Введите +375XXXXXXXXX или @username.",
             reply_markup=BACK_TO_MENU
         )
         return CONSULT_CONTACT
-
-    consult_text = f"📞 *ЗАПРОС КОНСУЛЬТАЦИИ*\n\nКонтакт: {contact}"
-    try:
-        for chat_id in RECIPIENT_IDS:
-            await context.bot.send_message(chat_id=chat_id, text=consult_text, parse_mode="Markdown")
-        await update.message.reply_text(
-            "✅ Спасибо! Менеджер свяжется с вами в ближайшее время.",
-            reply_markup=MAIN_MENU_KEYBOARD
-        )
-    except Exception as e:
-        logger.error(f"Ошибка отправки консультации: {e}")
-        await update.message.reply_text("⚠️ Ошибка. Попробуйте позже.", reply_markup=MAIN_MENU_KEYBOARD)
+    
     return ConversationHandler.END
+
 
 # ---------- КВИЗ ----------
 async def quiz_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.effective_user.id
-    # Пользователь начал опрос — отменяем напоминания
+    
+    # Пользователь начал опрос — отключаем напоминания
     if user_id in reminder_data:
         reminder_data[user_id]["status"] = "in_progress"
     
     context.user_data.clear()
-    context.user_data["history"] = []
     await update.message.reply_text(
-        "✏️ Начнём подбор клетки. Нажмите «🏠 В главное меню» для отмены.\n\nКакая порода вашей собаки?",
+        "✏️ Начнём подбор клетки.\n\nКакая порода вашей собаки?",
         reply_markup=BACK_TO_MENU
     )
     return PORODA
 
+
 async def poroda(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
+    
     context.user_data["poroda"] = update.message.text
     await update.message.reply_text(
-        "Укажите желаемые размеры (Д×Ш×В) в см. Пример: 100×70×80\n\n"
+        "Укажите размеры (Д×Ш×В) в см. Пример: 100×70×80\n\n"
         "Если не знаете – нажмите кнопку ниже.",
         reply_markup=SIZE_KEYBOARD
     )
     return SIZE
 
+
 async def size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Какая порода?", reply_markup=BACK_TO_MENU)
+        await update.message.reply_text("Порода?", reply_markup=BACK_TO_MENU)
         return PORODA
 
     text = update.message.text
@@ -285,38 +268,46 @@ async def size(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     else:
         context.user_data["size"] = text
         context.user_data["need_consultation"] = False
+    
     await update.message.reply_text("Нужны ли колесики?", reply_markup=YES_NO_KEYBOARD)
     return KOLESA
+
 
 async def kolesa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Укажите размеры:", reply_markup=SIZE_KEYBOARD)
+        await update.message.reply_text("Размеры:", reply_markup=SIZE_KEYBOARD)
         return SIZE
+    
     context.user_data["kolesa"] = update.message.text
     await update.message.reply_text("Нужны ли замки?", reply_markup=YES_NO_KEYBOARD)
     return ZAMKI
+
 
 async def zamki(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Нужны ли колесики?", reply_markup=YES_NO_KEYBOARD)
+        await update.message.reply_text("Колесики?", reply_markup=YES_NO_KEYBOARD)
         return KOLESA
+    
     context.user_data["zamki"] = update.message.text
-    await update.message.reply_text("Тип верха клетки:", reply_markup=TOP_KEYBOARD)
+    await update.message.reply_text("Тип верха:", reply_markup=TOP_KEYBOARD)
     return TOP_TYPE
+
 
 async def top_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Нужны ли замки?", reply_markup=YES_NO_KEYBOARD)
+        await update.message.reply_text("Замки?", reply_markup=YES_NO_KEYBOARD)
         return ZAMKI
+    
     context.user_data["top_type"] = update.message.text
-    await update.message.reply_text("Тип дна (пола):", reply_markup=BOTTOM_KEYBOARD)
+    await update.message.reply_text("Тип дна:", reply_markup=BOTTOM_KEYBOARD)
     return BOTTOM_TYPE
+
 
 async def bottom_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
@@ -324,13 +315,16 @@ async def bottom_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     if update.message.text == "Назад":
         await update.message.reply_text("Тип верха:", reply_markup=TOP_KEYBOARD)
         return TOP_TYPE
+    
     context.user_data["bottom_type"] = update.message.text
-
-    await update.message.reply_photo(photo=BLACK_PHOTO, caption="⚫ Чёрный цвет")
-    await update.message.reply_photo(photo=WHITE_PHOTO, caption="⚪ Белый цвет")
-    await update.message.reply_photo(photo=GRAPHITE_PHOTO, caption="🔘 Графитовый цвет")
+    
+    # Показываем фото цветов
+    await update.message.reply_photo(BLACK_PHOTO, caption="⚫ Чёрный")
+    await update.message.reply_photo(WHITE_PHOTO, caption="⚪ Белый")
+    await update.message.reply_photo(GRAPHITE_PHOTO, caption="🔘 Графит")
     await update.message.reply_text("Выберите цвет каркаса:", reply_markup=COLOR_KEYBOARD)
     return COLOR
+
 
 async def color(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
@@ -338,24 +332,26 @@ async def color(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "Назад":
         await update.message.reply_text("Тип дна:", reply_markup=BOTTOM_KEYBOARD)
         return BOTTOM_TYPE
+    
     context.user_data["color"] = update.message.text
     await update.message.reply_text("Выберите мессенджер для связи:", reply_markup=MESSENGER_KEYBOARD)
     return MESSENGER
+
 
 async def messenger(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Выберите цвет:", reply_markup=COLOR_KEYBOARD)
+        await update.message.reply_text("Цвет:", reply_markup=COLOR_KEYBOARD)
         return COLOR
+    
     context.user_data["messenger"] = update.message.text
     await update.message.reply_text(
-        "Укажите ваш контакт для связи:\n"
-        "• Белорусский номер телефона в формате +375XXXXXXXXX\n"
-        "• Или Telegram username (начинается с @)",
+        "Укажите ваш контакт:\n• +375XXXXXXXXX\n• или @username",
         reply_markup=BACK_TO_MENU
     )
     return CONTACT
+
 
 async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.effective_user.id
@@ -363,65 +359,61 @@ async def contact(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if update.message.text == "🏠 В главное меню":
         return await cancel(update, context)
     if update.message.text == "Назад":
-        await update.message.reply_text("Выберите мессенджер:", reply_markup=MESSENGER_KEYBOARD)
+        await update.message.reply_text("Мессенджер:", reply_markup=MESSENGER_KEYBOARD)
         return MESSENGER
 
     contact = update.message.text.strip()
-    if contact.startswith('@'):
-        pass
-    elif validate_belarus_phone(contact):
-        contact = normalize_phone(contact)
-    else:
-        await update.message.reply_text(
-            "❌ Неверный формат.\n\n"
-            "Пожалуйста, введите корректный белорусский номер телефона в формате +375XXXXXXXXX\n"
-            "Или Telegram username (начинается с @).\n\n"
-            "Примеры: +375291234567, @ivan_ivanov",
-            reply_markup=BACK_TO_MENU
+    if contact.startswith('@') or validate_belarus_phone(contact):
+        if not contact.startswith('@'):
+            contact = normalize_phone(contact)
+        
+        context.user_data["contact"] = contact
+        
+        order_text = (
+            "📦 *НОВАЯ ЗАЯВКА*\n\n"
+            f"🐕 Порода: {context.user_data.get('poroda')}\n"
+            f"📏 Размеры: {context.user_data.get('size')}\n"
+            f"🛞 Колесики: {context.user_data.get('kolesa')}\n"
+            f"🔒 Замки: {context.user_data.get('zamki')}\n"
+            f"🔝 Верх: {context.user_data.get('top_type')}\n"
+            f"🪵 Дно: {context.user_data.get('bottom_type')}\n"
+            f"🎨 Цвет: {context.user_data.get('color')}\n"
+            f"💬 Мессенджер: {context.user_data.get('messenger')}\n"
+            f"📞 Контакт: {contact}\n"
         )
-        return CONTACT
-
-    context.user_data["contact"] = contact
-    order_text = (
-        "📦 *НОВАЯ ЗАЯВКА НА КЛЕТКУ*\n\n"
-        f"🐕 Порода: {context.user_data.get('poroda')}\n"
-        f"📏 Размеры: {context.user_data.get('size')}\n"
-        f"🛞 Колесики: {context.user_data.get('kolesa')}\n"
-        f"🔒 Замки: {context.user_data.get('zamki')}\n"
-        f"🔝 Верх: {context.user_data.get('top_type')}\n"
-        f"🪵 Дно: {context.user_data.get('bottom_type')}\n"
-        f"🎨 Цвет: {context.user_data.get('color')}\n"
-        f"💬 Мессенджер: {context.user_data.get('messenger')}\n"
-        f"📞 Контакт: {contact}\n"
-    )
-    if context.user_data.get("need_consultation"):
-        order_text += "\n⚠️ *Клиент запросил консультацию по размерам!*"
-
-    try:
+        if context.user_data.get("need_consultation"):
+            order_text += "\n⚠️ *Нужна консультация по размерам!*"
+        
         for chat_id in RECIPIENT_IDS:
             await context.bot.send_message(chat_id=chat_id, text=order_text, parse_mode="Markdown")
-        await update.message.reply_text(
-            "✅ Заявка отправлена! Менеджер свяжется с вами в ближайшее время.\n\nСпасибо! 🐾",
-            reply_markup=MAIN_MENU_KEYBOARD
-        )
         
         # Пользователь успешно прошёл опрос — отключаем напоминания
         if user_id in reminder_data:
             reminder_data[user_id]["status"] = "completed"
         
-    except Exception as e:
-        logger.error(f"Ошибка: {e}")
-        await update.message.reply_text("⚠️ Ошибка, попробуйте позже.", reply_markup=MAIN_MENU_KEYBOARD)
-    return ConversationHandler.END
+        await update.message.reply_text(
+            "✅ Заявка отправлена! Менеджер свяжется с вами.\n\nСпасибо! 🐾",
+            reply_markup=MAIN_MENU_KEYBOARD
+        )
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text(
+            "❌ Неверный формат.\n\nВведите +375XXXXXXXXX или @username",
+            reply_markup=BACK_TO_MENU
+        )
+        return CONTACT
+
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_id = update.effective_user.id
-    # Если пользователь отменил опрос, возвращаем статус waiting для напоминаний
+    
+    # Возвращаем статус waiting для напоминаний
     if user_id in reminder_data and reminder_data[user_id]["status"] == "in_progress":
         reminder_data[user_id]["status"] = "waiting"
     
     await update.message.reply_text("Отменено. Главное меню:", reply_markup=MAIN_MENU_KEYBOARD)
     return ConversationHandler.END
+
 
 async def handle_regular_messages(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = update.message.text
@@ -435,6 +427,7 @@ async def handle_regular_messages(update: Update, context: ContextTypes.DEFAULT_
         await consult_manager(update, context)
     else:
         await update.message.reply_text("Используйте кнопки меню.", reply_markup=MAIN_MENU_KEYBOARD)
+
 
 def main():
     TOKEN = "8760250614:AAH4MUjhJi5G0L8ZzAWOnhCM4s5NkARYPlc"
@@ -467,12 +460,13 @@ def main():
     application.add_handler(quiz_conv)
     application.add_handler(consult_conv)
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_regular_messages))
-    
-    # Запускаем фоновую задачу для проверки напоминаний
+
+    # Запускаем фоновую задачу для напоминаний
     loop = asyncio.get_event_loop()
     loop.create_task(check_reminders(application))
 
     application.run_polling()
+
 
 if __name__ == "__main__":
     main()
